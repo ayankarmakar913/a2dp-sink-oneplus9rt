@@ -28,6 +28,8 @@ You are choosing to flash random root code from the internet onto your phone.
    - **Restart A2DP Sink** (appears **only in SINK mode**) — use when switching to a different source device
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
+
+**After connecting in SINK mode:** it may take a few seconds before music starts playing — wait a bit and it should be fine.
 4. **Commands (root fallback):**
    ```sh
    su -c /data/adb/a2dp-sink status
@@ -42,7 +44,7 @@ The source may negotiate AAC (broken on this ROM). Run `su -c /data/adb/a2dp-sin
 
 ## Known limitations
 - **AAC sink not supported**; SBC is forced.
-- **~10s delay** after connecting before audio may start.
+- **After connecting, it may take a few seconds before music starts playing** (sometimes up to ~10s). Wait a bit — after that, playback should be fine.
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **ROM compatibility is limited**.
 

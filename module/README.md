@@ -17,7 +17,9 @@ On this ROM, the AAC *sink* decoder crashes (`SIGSEGV` in `aacDecoder_Fill`) whe
 ## Install / update
 1. Flash `A2DP-Sink-OnePlus9RT-v1.3.zip` in APatch/Magisk. Reboot if needed.
 2. **Easy control (no commands):** open the module **WebUI** in your manager (if supported). It provides **Toggle Source/Sink** and **Restart A2DP Sink** (shown only in SINK mode). APatch **Action** button also toggles.
-3. **Optional QS tiles:** the module bundles **A2DP-QS.apk** and tries to install it on boot. Android requires one-time setup: QS → Edit → add **A2DP Mode** and **Restart A2DP Sink**, then grant root to **A2DP Sink QS**. If tiles don’t show on your ROM, use **WebUI** or commands.
+3. Use **WebUI** / **APatch Action** / commands to control mode.
+
+**After connecting in SINK mode:** it may take a few seconds before music starts playing — wait a bit and it should be fine.
 
 ## Commands (root)
 ```sh
