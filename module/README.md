@@ -35,12 +35,10 @@ su -c /data/adb/a2dp-sink diag [60]  # capture logs/state while reproducing an i
 
 APatch module **Action** button toggles SOURCE/SINK.
 
-## New source device has no sound
-1. Try connecting/pairing it in **SINK** mode.
-2. Run: `su -c /data/adb/a2dp-sink learn`
-3. Reconnect the device and play audio.
-
-Learned address prefixes are saved in `/data/adb/a2dp_sink_learned.conf`. If needed, pass the device’s Bluetooth address: `su -c '/data/adb/a2dp-sink learn AA:BB:CC:DD:EE:FF'`.
+## No sound / troubleshooting
+- **Quick fix:** if you get no sound, **turn Bluetooth OFF and ON once on both the source and receiver (9RT) devices**. This usually fixes it.
+- **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in SINK mode) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
+- **New source device has no sound (codec/interop):** run `su -c /data/adb/a2dp-sink learn`, then reconnect (or `su -c '/data/adb/a2dp-sink learn AA:BB:CC:DD:EE:FF'`). Learned prefixes are saved in `/data/adb/a2dp_sink_learned.conf`. Configured codec should be **SBC**.
 
 ## Limitations / behavior
 - **AAC sink not supported** on this ROM (decoder crash). The module forces SBC for sink sources.

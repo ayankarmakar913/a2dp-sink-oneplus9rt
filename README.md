@@ -39,8 +39,10 @@ You are choosing to flash random root code from the internet onto your phone.
    su -c '/data/adb/a2dp-sink learn AA:BB:CC:DD:EE:FF'
    ```
 
-## New device connects but no sound?
-The source may negotiate AAC (broken on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect the device. Configured codec should be **SBC**.
+## No sound / troubleshooting
+- **Quick fix:** if you get no sound, **turn Bluetooth OFF and ON once on both the source and receiver (9RT) devices**. This usually fixes it.
+- **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in SINK mode) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
+- **New device connects but no sound:** the source may negotiate AAC (broken on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect the device. Configured codec should be **SBC**.
 
 
 
