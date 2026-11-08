@@ -1,10 +1,11 @@
 #!/system/bin/sh
 # Action button / command-line helper.
-# Usage: action.sh [toggle|on|off|status|diag [seconds]]   (default: toggle)
+# Usage: action.sh [toggle|on|off|status|diag [seconds]|learn [addr]|restart|codec ...]   (default: toggle)
 #
 # on   = SINK mode (phone receives audio; Bluetooth output disabled)
 # off  = SOURCE mode (normal Bluetooth output; sink disabled)
 # diag = capture Bluetooth/audio state and logs while you reproduce the issue
+# codec= experimental codec negotiation control (SBC is the safe default)
 
 MODDIR=${0%/*}
 [ -f "$MODDIR/common.sh" ] || MODDIR=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
@@ -160,9 +161,12 @@ case "$ACTION" in
         echo "Learning A2DP source addresses and forcing SBC..."
         _disc=$(discover_sink_blacklist_addrs 2>/dev/null | tr '\n' ',' | sed 's/,$//')
         [ -n "$_disc" ] && echo "Discovered prefixes: $_disc"
+        if [ "$A2DP_SINK_CODEC_POLICY" = "auto-experimental" ]; then
+            echo "NOTE: codec policy is auto-experimental (SBC not forced). Use 'codec sbc' to restore reliable SBC."
+        fi
         ensure_sink_interop || { echo "Could not update interop config."; exit 1; }
         if [ "$(current_mode)" = "sink" ]; then
-            echo "Restarting Bluetooth to apply SBC codec policy..."
+            echo "Restarting Bluetooth to apply codec policy..."
             restart_bluetooth sink || true
         else
             echo "Applied (SOURCE mode; will take effect in SINK mode)."
@@ -182,15 +186,77 @@ case "$ACTION" in
         echo
         echo "Sink restarted. Reconnect the source device you want to use."
         ;;
+    codec)
+        # Experimental: control sink codec negotiation. SBC is the only reliable
+        # sink codec on this ROM (AAC sink decoder crashes with SIGSEGV).
+        _sub=${2:-status}
+        case "$_sub" in
+            status)
+                echo "codec policy: $A2DP_SINK_CODEC_POLICY"
+                echo "safe default: sbc (forces SBC; avoids AAC sink crash)"
+                echo "experimental: auto-experimental (lets stack negotiate; AAC may CRASH / no sound)"
+                echo "backups: $CODEC_EXPERIMENT_BACKUP_DIR (and full module/config backups may exist under /data/adb/a2dp_sink_backup_*)"
+                show_status
+                ;;
+            backup)
+                backup_codec_state "$CODEC_EXPERIMENT_BACKUP_DIR" && echo "Backed up interop/config to $CODEC_EXPERIMENT_BACKUP_DIR" || echo "Backup failed"
+                ;;
+            revert)
+                echo "Reverting codec/interops to backup and restoring SBC policy..."
+                revert_codec_state "$CODEC_EXPERIMENT_BACKUP_DIR" || echo "WARNING: could not restore from $CODEC_EXPERIMENT_BACKUP_DIR (continuing with SBC defaults)"
+                set_codec_policy sbc
+                ensure_sink_interop || true
+                if [ "$(current_mode)" = "sink" ]; then
+                    restart_bluetooth sink || true
+                fi
+                echo "Reverted to SBC (safe)."
+                show_status
+                ;;
+            sbc|safe)
+                backup_codec_state "$CODEC_EXPERIMENT_BACKUP_DIR" >/dev/null 2>&1 || true
+                set_codec_policy sbc
+                ensure_sink_interop || { echo "Could not apply SBC policy."; exit 1; }
+                if [ "$(current_mode)" = "sink" ]; then
+                    echo "Restarting Bluetooth to apply SBC policy..."
+                    restart_bluetooth sink || true
+                fi
+                echo "Codec policy: SBC forced (safe)."
+                show_status
+                ;;
+            auto-experimental|auto|experimental)
+                echo "WARNING: AUTO-EXPERIMENTAL codec mode."
+                echo " - This ROM's AAC A2DP *sink* decoder is known to CRASH (SIGSEGV)."
+                echo " - Other codecs (LDAC/aptX/LHDC) may not be supported as sink and can cause no sound."
+                echo " - If things break: su -c '/data/adb/a2dp-sink codec revert' or 'codec sbc'"
+                backup_codec_state "$CODEC_EXPERIMENT_BACKUP_DIR" || { echo "Backup failed; aborting."; exit 1; }
+                set_codec_policy auto-experimental
+                ensure_sink_interop || true
+                if [ "$(current_mode)" = "sink" ]; then
+                    echo "Restarting Bluetooth to apply experimental codec policy..."
+                    restart_bluetooth sink || true
+                fi
+                echo "Codec policy: auto-experimental. Reconnect source and test. Check: dumpsys bluetooth_manager | grep 'Configured codec'"
+                show_status
+                ;;
+            *)
+                echo "Usage: $0 codec [status|backup|sbc|auto-experimental|revert]"
+                echo "  sbc             : SAFE default - force SBC (avoids AAC sink crash)"
+                echo "  auto-experimental: let stack negotiate codecs (RISKY: AAC may crash; others may not work)"
+                echo "  backup          : backup interop/config before experiments"
+                echo "  revert          : restore backup and return to SBC"
+                exit 1
+                ;;
+        esac
+        ;;
     *)
-        echo "Usage: $0 [toggle|on|off|status|diag [seconds]|learn [addr]|restart]"
+        echo "Usage: $0 [toggle|on|off|status|diag [seconds]|learn [addr]|restart|codec ...]"
         echo "  toggle  : switch between SOURCE and SINK mode"
-        echo "  on      : SINK mode (receive audio from PC/TV)"
-        echo "  off     : SOURCE mode (normal Bluetooth output)"
-        echo "  status  : show current mode"
-        echo "  diag    : capture state/logs while a source device is connected"
+        echo "  on/off  : SINK (receive audio) / SOURCE (normal output)"
+        echo "  status  : show current mode + codec policy"
+        echo "  restart : restart Bluetooth in SINK mode"
         echo "  learn   : force SBC for bonded/active sources (fixes no-sound/AAC crash)"
-        echo "  restart : restart Bluetooth in SINK mode (clean reconnect for another device)"
+        echo "  diag    : capture state/logs while reproducing an issue"
+        echo "  codec   : [status|backup|sbc|auto-experimental|revert] (EXPERIMENTAL; SBC is safe default)"
         exit 1
         ;;
 esac

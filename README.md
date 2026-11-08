@@ -42,8 +42,19 @@ You are choosing to flash random root code from the internet onto your phone.
 ## New device connects but no sound?
 The source may negotiate AAC (broken on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect the device. Configured codec should be **SBC**.
 
+
+## Sink codec (SBC default; experimental options)
+- **Only SBC is reliably supported as A2DP sink on this ROM.** The module forces SBC because the **AAC sink decoder crashes** (`aacDecoder_Fill` SIGSEGV). Other codecs (LDAC/aptX/LHDC) may have stack symbols/libs but are **not confirmed as stable A2DP sink decoders** here — trying them can cause “plays but no sound” or Bluetooth issues.
+- **Commands (root):**
+  - `su -c /data/adb/a2dp-sink codec status` — show policy
+  - `su -c /data/adb/a2dp-sink codec sbc` — **safe default** (force SBC)
+  - `su -c /data/adb/a2dp-sink codec backup` — backup interop/config before experiments
+  - `su -c /data/adb/a2dp-sink codec auto-experimental` — **RISKY:** let the stack negotiate codecs (AAC may crash; others may not work). Test, then check `Configured codec` in `dumpsys bluetooth_manager`.
+  - `su -c /data/adb/a2dp-sink codec revert` — restore backup and return to SBC
+- **If something breaks:** `su -c /data/adb/a2dp-sink codec revert` (or `codec sbc`), then reconnect. Full safety backups may exist under `/data/adb/a2dp_sink_backup_*`.
+
 ## Known limitations
-- **AAC sink not supported**; SBC is forced.
+- **AAC sink not supported** (decoder crashes); SBC is forced by default. Other sink codecs are experimental/unconfirmed on this ROM.
 - **After connecting, it may take a few seconds before music starts playing** (sometimes up to ~10s). Wait a bit — after that, playback should be fine.
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **ROM compatibility is limited**.

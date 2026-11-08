@@ -49,9 +49,12 @@ PATH=/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:$PATH
 # Default includes known-good prefixes and is extended dynamically from bonded
 # devices and the active peer. Override in /data/adb/a2dp_sink_enabler.conf.
 A2DP_SINK_AAC_BLACKLIST=${A2DP_SINK_AAC_BLACKLIST:-22:22:47,22:22:02}
+A2DP_SINK_CODEC_POLICY=${A2DP_SINK_CODEC_POLICY:-sbc}
 [ -f /data/adb/a2dp_sink_enabler.conf ] && . /data/adb/a2dp_sink_enabler.conf
+A2DP_SINK_CODEC_POLICY=${A2DP_SINK_CODEC_POLICY:-sbc}
 INTEROP_STANDARD_FILE=/data/misc/bluedroid/interop_database_dynamic.conf
 INTEROP_OPLUS_FILE=/data/misc/bluedroid/bt_oplus_iot_list.conf
+CODEC_EXPERIMENT_BACKUP_DIR=/data/adb/a2dp_sink_codec_backup
 
 # APatch/Magisk run Action scripts with a BusyBox ash that has a built-in
 # "svc" applet. That applet is NOT Android's /system/bin/svc, so calling plain
@@ -100,7 +103,7 @@ set_sink_props() {
     set_prop bluetooth.profile.avrcp.controller.enabled false
     ensure_audio_focus_overlay || log "WARNING: audio focus overlay is not active"
     ensure_sink_interop || log "WARNING: could not write the sink interop list"
-    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled) aac_blacklist=$A2DP_SINK_AAC_BLACKLIST"
+    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled) codec_policy=$A2DP_SINK_CODEC_POLICY aac_blacklist=$A2DP_SINK_AAC_BLACKLIST"
     [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)" = "true" ] &&
         [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)" = "false" ]
 }
@@ -276,10 +279,61 @@ _save_learned_interop_addrs() {
     printf 'A2DP_SINK_LEARNED=%s\n' "$_all" > "$LEARNED_INTEROP_FILE" 2>/dev/null || true
 }
 
+backup_codec_state() {
+    _dir=${1:-$CODEC_EXPERIMENT_BACKUP_DIR}
+    mkdir -p "$_dir" 2>/dev/null || return 1
+    [ -f "$INTEROP_STANDARD_FILE" ] && cp -a "$INTEROP_STANDARD_FILE" "$_dir/" 2>/dev/null || true
+    [ -f "$INTEROP_OPLUS_FILE" ] && cp -a "$INTEROP_OPLUS_FILE" "$_dir/" 2>/dev/null || true
+    [ -f "$LEARNED_INTEROP_FILE" ] && cp -a "$LEARNED_INTEROP_FILE" "$_dir/" 2>/dev/null || true
+    [ -f /data/adb/a2dp_sink_enabler.conf ] && cp -a /data/adb/a2dp_sink_enabler.conf "$_dir/" 2>/dev/null || true
+    printf 'backed_up=%s\npolicy=%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$A2DP_SINK_CODEC_POLICY" > "$_dir/meta.txt" 2>/dev/null || true
+    log "codec: backed up interop/config to $_dir"
+    return 0
+}
+
+revert_codec_state() {
+    _dir=${1:-$CODEC_EXPERIMENT_BACKUP_DIR}
+    [ -d "$_dir" ] || return 1
+    [ -f "$_dir/interop_database_dynamic.conf" ] && cp -a "$_dir/interop_database_dynamic.conf" "$INTEROP_STANDARD_FILE" 2>/dev/null || true
+    [ -f "$_dir/bt_oplus_iot_list.conf" ] && cp -a "$_dir/bt_oplus_iot_list.conf" "$INTEROP_OPLUS_FILE" 2>/dev/null || true
+    interop_perms "$INTEROP_STANDARD_FILE"
+    interop_perms "$INTEROP_OPLUS_FILE"
+    [ -f "$_dir/a2dp_sink_enabler.conf" ] && cp -a "$_dir/a2dp_sink_enabler.conf" /data/adb/a2dp_sink_enabler.conf 2>/dev/null || true
+    [ -f /data/adb/a2dp_sink_enabler.conf ] && . /data/adb/a2dp_sink_enabler.conf 2>/dev/null || true
+    A2DP_SINK_CODEC_POLICY=sbc
+    log "codec: reverted interop/config from $_dir"
+    return 0
+}
+
+set_codec_policy() {
+    _p=${1:-sbc}
+    case "$_p" in sbc|auto-experimental) ;; *) return 1 ;; esac
+    A2DP_SINK_CODEC_POLICY=$_p
+    mkdir -p /data/adb 2>/dev/null || true
+    # preserve other config keys by rewriting only policy if file exists
+    if [ -f /data/adb/a2dp_sink_enabler.conf ]; then
+        _tmp=/data/adb/a2dp_sink_enabler.conf.tmp
+        grep -v '^A2DP_SINK_CODEC_POLICY=' /data/adb/a2dp_sink_enabler.conf > "$_tmp" 2>/dev/null || true
+        printf 'A2DP_SINK_CODEC_POLICY=%s\n' "$_p" >> "$_tmp"
+        mv "$_tmp" /data/adb/a2dp_sink_enabler.conf
+    else
+        printf 'A2DP_SINK_CODEC_POLICY=%s\n' "$_p" > /data/adb/a2dp_sink_enabler.conf
+    fi
+    log "codec: policy set to $_p"
+    return 0
+}
+
 # Add configured/discovered source devices to Bluetooth interop databases and
-# force SBC instead of the crashing AAC sink decoder.
+# force SBC instead of the crashing AAC sink decoder (when policy=sbc).
 ensure_sink_interop() {
     [ -d /data/misc/bluedroid ] || return 1
+
+    if [ "$A2DP_SINK_CODEC_POLICY" = "auto-experimental" ]; then
+        # Experimental: do not force SBC; allow stack negotiation (AAC may crash).
+        remove_sink_interop >/dev/null 2>&1 || true
+        log "sink interop: AUTO-EXPERIMENTAL (no SBC forcing). WARNING: AAC sink may crash on this ROM."
+        return 0
+    fi
 
     _list=$(_all_sink_interop_addrs)
     [ -n "$_list" ] || return 1
@@ -467,6 +521,7 @@ show_status() {
     else
         echo "mode:                      SOURCE (normal Bluetooth output)"
     fi
+    echo "codec policy:              $A2DP_SINK_CODEC_POLICY (sbc=safe/forced; auto-experimental=stack negotiates, AAC may CRASH)"
     echo "source property:           $("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)"
     echo "sink property:             $("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)"
     echo "AVRCP target property:     $("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled)"

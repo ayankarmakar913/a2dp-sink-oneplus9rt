@@ -35,14 +35,6 @@ su -c /data/adb/a2dp-sink diag [60]  # capture logs/state while reproducing an i
 
 APatch module **Action** button toggles SOURCE/SINK.
 
-## Quick Settings (QS) tiles
-The module bundles **A2DP-QS.apk** (companion app) and attempts to install it at boot (`service.sh`). After the app is installed:
-1. Open Quick Settings edit (pencil/customize).
-2. Add the tiles **“A2DP Mode”** (toggle Source/Sink) and **“Restart A2DP Sink”**.
-3. Grant root/su access to **A2DP Sink QS** when prompted.
-
-Android does not allow apps/modules to add tiles to the QS panel automatically; you only need to add them once. The tiles run `su -c /data/adb/a2dp-sink toggle` and `su -c /data/adb/a2dp-sink restart`. If the APK wasn’t auto-installed, install `/data/adb/modules/a2dp_sink_enabler/A2DP-QS.apk` manually.
-
 ## New source device has no sound
 1. Try connecting/pairing it in **SINK** mode.
 2. Run: `su -c /data/adb/a2dp-sink learn`
@@ -65,3 +57,14 @@ su -c 'dumpsys bluetooth_manager 2>/dev/null | sed -n "/A2DP Sink State/,/BTA AV
 
 ## Uninstall
 Remove/disable the module in APatch/Magisk and reboot. Uninstall restores SOURCE mode and removes module helpers/learned config (best effort).
+
+
+## Sink codec (SBC default; experimental options)
+- **Only SBC is reliably supported as A2DP sink on this ROM.** The module forces SBC because the **AAC sink decoder crashes** (`aacDecoder_Fill` SIGSEGV). Other codecs (LDAC/aptX/LHDC) may have stack symbols/libs but are **not confirmed as stable A2DP sink decoders** here — trying them can cause “plays but no sound” or Bluetooth issues.
+- **Commands (root):**
+  - `su -c /data/adb/a2dp-sink codec status` — show policy
+  - `su -c /data/adb/a2dp-sink codec sbc` — **safe default** (force SBC)
+  - `su -c /data/adb/a2dp-sink codec backup` — backup interop/config before experiments
+  - `su -c /data/adb/a2dp-sink codec auto-experimental` — **RISKY:** let the stack negotiate codecs (AAC may crash; others may not work). Test, then check `Configured codec` in `dumpsys bluetooth_manager`.
+  - `su -c /data/adb/a2dp-sink codec revert` — restore backup and return to SBC
+- **If something breaks:** `su -c /data/adb/a2dp-sink codec revert` (or `codec sbc`), then reconnect. Full safety backups may exist under `/data/adb/a2dp_sink_backup_*`.
