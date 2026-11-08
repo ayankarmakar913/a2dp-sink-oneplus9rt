@@ -28,21 +28,7 @@ rm -f /data/adb/a2dp-sink 2>/dev/null || true
     echo "exec sh \"$MODDIR/action.sh\" \"\$@\""
 } > /data/adb/a2dp-sink 2>/dev/null && chmod 755 /data/adb/a2dp-sink 2>/dev/null || true
 
-# Optional: install a bundled companion QS-tile app (if present in the module).
-# The app is not built into v1.3 by default because on-device APK compilation
-# needs Android SDK stubs; place A2DP-QS.apk in the module directory to enable.
-for _apk in "$MODDIR"/A2DP-QS.apk "$MODDIR"/*.qs.apk; do
-    [ -f "$_apk" ] || continue
-    _pkg=$(unzip -p "$_apk" AndroidManifest.xml 2>/dev/null | strings 2>/dev/null | grep '^com\.' | head -1)
-    [ -n "$_pkg" ] || _pkg=com.a2dp.sink.qs
-    if ! /system/bin/pm list packages 2>/dev/null | grep -q "package:${_pkg}$"; then
-        /system/bin/cmd package install -r "$_apk" >> "$LOG_FILE" 2>&1 ||
-            /system/bin/pm install -r "$_apk" >> "$LOG_FILE" 2>&1 ||
-            log "service: failed to install $_apk"
-        log "service: attempted install of $_apk ($_pkg)"
-    fi
-    break
-done
+# (QS companion app removed; use WebUI / Action / commands)
 
 if [ -f "$MODE_MARKER" ]; then
     sink_state_is Disabled ||

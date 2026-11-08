@@ -18,7 +18,6 @@ zip -9r "$OUT" \
     uninstall.sh \
     common.sh \
     README.md \
-    A2DP-QS.apk \
     webroot
 
 echo "Built: $(cd .. && pwd)/$(basename "$OUT")"
