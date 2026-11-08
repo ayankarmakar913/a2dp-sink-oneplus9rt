@@ -10,7 +10,7 @@ A Magisk/APatch module that switches the phone between:
 - **Tested on:** **MT2111-OOS-16.0.5.1002-20260727-ARB** (OnePlus 9RT / MT2111), rooted with **APatch**.
 - **ROM/BT stack specific:** relies on this ROM’s Bluetooth stack/paths/behavior (Oplus-style interop/config, A2DP role props, service restart). Other custom ROMs/BT stacks may not work.
 - **Root + system-level changes:** modifies Bluetooth profile properties, writes interop config, enables an overlay, and restarts the Bluetooth stack.
-- **AAC sink is broken on this ROM:** the module forces **SBC** for sink sources. AAC sink is not supported here.
+- **AAC *sink* (receiving) is broken on this ROM:** in **SINK mode** the module forces **SBC** to avoid the AAC sink decoder crash. **SOURCE mode** (normal output) is unaffected and can use **AAC/other supported codecs** to your headphones/devices.
 - **Have recovery ready:** know how to disable/remove APatch/Magisk modules if Bluetooth/boot behavior becomes problematic. Back up important data.
 
 ## ⚠️ WARNING — DO THIS AT YOUR OWN RISK
@@ -41,16 +41,17 @@ You are choosing to flash random root code from the internet onto your phone.
 
 ## No sound / troubleshooting
 - **Quick fix:** if you get no sound, **turn Bluetooth OFF and ON once on both the source and receiver (9RT) devices**. This usually fixes it.
-- **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in SINK mode) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
-- **New device connects but no sound:** the source may negotiate AAC (broken on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect the device. Configured codec should be **SBC**.
+- **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in **SINK mode**) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
+- **SINK mode, new device has no sound:** source may negotiate AAC (AAC *sink* crashes on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect — negotiated codec should be **SBC**.
+- **SOURCE mode (9RT sending audio) — AAC/codec issues:** SBC-forcing applies only in SINK mode. If AAC won’t negotiate to a device, **Forget & re-pair** that device on the 9RT and ensure the 9RT isn’t stuck with stale BT codec/interops; then check the configured codec.
 
 
 
 ## Known limitations
-- **AAC sink not supported** (decoder crashes on this ROM); SBC is forced.
-- **After connecting, it may take a few seconds before music starts playing** (sometimes up to ~10s). Wait a bit — after that, playback should be fine.
+- **SINK mode:** **AAC sink not supported** (decoder crashes on this ROM) — **SBC is forced** when receiving. **SOURCE mode:** normal output; **AAC/other codecs can work** (SBC not forced by the module in source mode).
+- **After connecting (SINK),** it may take a few seconds before music starts (sometimes up to ~10s).
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
-- **ROM compatibility is limited**.
+- **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**
 
 ## Uninstall / recovery
 Disable/remove the module in APatch/Magisk and reboot. Or: `su -c /data/adb/a2dp-sink off`.
