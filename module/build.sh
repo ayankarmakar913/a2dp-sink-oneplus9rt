@@ -3,7 +3,7 @@
 set -eu
 cd "$(dirname "$0")"
 
-OUT=../A2DP-Sink-OnePlus9RT-v1.3.2.zip
+OUT=../A2DP-Sink-OnePlus9RT-v1.3.3.zip
 rm -f "$OUT"
 
 chmod 644 module.prop README.md

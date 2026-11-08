@@ -57,12 +57,3 @@ su -c 'dumpsys bluetooth_manager 2>/dev/null | sed -n "/A2DP Sink State/,/BTA AV
 Remove/disable the module in APatch/Magisk and reboot. Uninstall restores SOURCE mode and removes module helpers/learned config (best effort).
 
 
-## Sink codec (SBC default; experimental options)
-- **Only SBC is reliably supported as A2DP sink on this ROM.** The module forces SBC because the **AAC sink decoder crashes** (`aacDecoder_Fill` SIGSEGV). Other codecs (LDAC/aptX/LHDC) may have stack symbols/libs but are **not confirmed as stable A2DP sink decoders** here — trying them can cause “plays but no sound” or Bluetooth issues.
-- **Commands (root):**
-  - `su -c /data/adb/a2dp-sink codec status` — show policy
-  - `su -c /data/adb/a2dp-sink codec sbc` — **safe default** (force SBC)
-  - `su -c /data/adb/a2dp-sink codec backup` — backup interop/config before experiments
-  - `su -c /data/adb/a2dp-sink codec auto-experimental` — **RISKY:** let the stack negotiate codecs (AAC may crash; others may not work). Test, then check `Configured codec` in `dumpsys bluetooth_manager`.
-  - `su -c /data/adb/a2dp-sink codec revert` — restore backup and return to SBC
-- **If something breaks:** `su -c /data/adb/a2dp-sink codec revert` (or `codec sbc`), then reconnect. Full safety backups may exist under `/data/adb/a2dp_sink_backup_*`.

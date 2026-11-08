@@ -120,9 +120,6 @@ set_source_props() {
 }
 
 # Kept for compatibility with older copies of the scripts.
-clear_sink_props() {
-    set_source_props
-}
 
 # The focus overlay is installed and enabled once, then left enabled. It has
 # no effect while sink mode is off because A2dpSinkService is not running.
@@ -130,9 +127,6 @@ overlay_list() {
     "$ANDROID_CMD" overlay list --user 0 2>/dev/null
 }
 
-audio_focus_overlay_enabled() {
-    overlay_list | grep -q '\[x\].*A2dpSinkFocus'
-}
 
 ensure_audio_focus_overlay() {
     [ -x "$ANDROID_CMD" ] || return 1
