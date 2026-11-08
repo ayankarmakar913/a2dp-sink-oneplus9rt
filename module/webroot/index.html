@@ -34,7 +34,7 @@
     <button class="secondary" id="btn-status" onclick="run('status')">Refresh Status</button>
   </div>
   <div class="card"><div class="muted">Output</div><div id="status"></div></div>
-  <div class="muted">SOURCE: normal output. SINK: receives audio. Mode switch/reconnect can take ~10s–1m. Fallback: <code>su -c /data/adb/a2dp-sink toggle|restart|status</code></div>
+  <div class="muted">SOURCE: normal output. SINK: receives audio. Mode switch/reconnect can take ~10–20s. Fallback: <code>su -c /data/adb/a2dp-sink toggle|restart|status</code></div>
 <script>
 const SINK="/data/adb/a2dp-sink";
 document.querySelectorAll('button').forEach(b=>{

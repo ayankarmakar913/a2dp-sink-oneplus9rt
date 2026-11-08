@@ -14,7 +14,7 @@ The ROM stack is unreliable with both A2DP roles active, so the module enforces 
 1. Flash the module zip in APatch/Magisk. Reboot if needed.
 2. **WebUI** (if supported): **Toggle Source/Sink** and **Restart A2DP Sink** (shown only in SINK mode). APatch **Action** button also toggles.
 
-**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 1 minute** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
+**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10–20 seconds** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 
 ## Commands (root)
 ```sh
@@ -37,7 +37,7 @@ su -c 'dumpsys bluetooth_manager 2>/dev/null | grep -E "A2DP (Source|Sink) State
 ```
 
 ## Known limitations
-- **Mode switching / reconnect** can take **~10 seconds to 1 minute**.
+- **Mode switching / reconnect** can take **~10–20 seconds**.
 - **Two devices can connect**, but automatic handover may not switch the sink’s active audio path on this vendor stack. Workaround: keep one active source at a time, or use **Restart A2DP Sink** and reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM/device compatibility is limited.**
 

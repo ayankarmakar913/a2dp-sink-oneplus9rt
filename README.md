@@ -28,7 +28,7 @@ You are choosing to flash random root code from the internet onto your phone.
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 
-**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 20 seconds** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
+**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10–20 seconds** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 
 4. **Commands (root fallback):**
    ```sh
@@ -51,7 +51,7 @@ You are choosing to flash random root code from the internet onto your phone.
   ```
 
 ## Known limitations
-- **Mode switching / reconnect** can take **~10 seconds to 20 seconds**.
+- **Mode switching / reconnect** can take **~10–20 seconds**.
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**
 
