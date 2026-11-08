@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>A2DP Sink/Src</title>
+  <style>
+    body{font-family:system-ui,sans-serif;margin:16px;background:#111;color:#eee}
+    .card{background:#1c1c1c;border-radius:12px;padding:14px;margin:10px 0}
+    button{width:100%;padding:14px;margin:8px 0;border:0;border-radius:10px;font-size:16px;font-weight:600}
+    .primary{background:#2d7ff9;color:#fff}
+    .warn{background:#f39c12;color:#111}
+    .secondary{background:#333;color:#eee}
+    .muted{color:#aaa;font-size:13px;line-height:1.35}
+    #status{white-space:pre-wrap;font-family:monospace;font-size:12px;color:#bdb}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+  <h3>A2DP Sink / Source Switcher</h3>
+  <div class="card">
+    <div id="mode">Mode: checking…</div>
+    <div class="muted" id="hint"></div>
+  </div>
+  <div class="card">
+    <button class="primary" id="toggle" onclick="run('toggle')">Toggle Source / Sink</button>
+    <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink (reconnect device)</button>
+    <button class="secondary" onclick="run('status')">Refresh Status</button>
+    <button class="secondary" onclick="run('learn')">Learn/Fix New Device (SBC)</button>
+  </div>
+  <div class="card"><div class="muted">Output</div><div id="status"></div></div>
+  <div class="muted">If buttons don’t work, your manager may not support module WebUI exec. Use: <code>su -c /data/adb/a2dp-sink toggle</code> / <code>restart</code>.</div>
+<script>
+const SINK="/data/adb/a2dp-sink";
+function apiExec(cmd, cb){
+  try{
+    if(typeof ksu!=='undefined' && ksu.exec){
+      const id="cb"+Date.now()+Math.random();
+      window[id]=(c,o,e)=>cb(o||e||"");
+      ksu.exec(cmd,"{}",id); return;
+    }
+    if(typeof apatch!=='undefined' && apatch.exec){
+      const id="cb"+Date.now()+Math.random();
+      window[id]=(c,o,e)=>cb(o||e||"");
+      apatch.exec(cmd,"{}",id); return;
+    }
+    if(typeof globalThis.ksu?.exec==='function'){ globalThis.ksu.exec(cmd,"{}",(c,o,e)=>cb(o||e||"")); return; }
+  }catch(e){}
+  cb("WebUI exec API not available in this manager.\nRun manually:\n"+cmd);
+}
+function setMode(text){
+  document.getElementById('status').textContent=text||"";
+  const sink=/mode:\s*SINK/i.test(text) || /A2DP Sink State:\s*Enabled/i.test(text);
+  const src=/mode:\s*SOURCE/i.test(text) || /A2DP Sink State:\s*Disabled/i.test(text);
+  const m=document.getElementById('mode');
+  const r=document.getElementById('restart');
+  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); document.getElementById('hint').textContent="Restart Sink helps when switching to a different source device."; }
+  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); document.getElementById('hint').textContent="Toggle to SINK to receive audio from another device."; }
+  else { m.textContent="Mode: unknown (tap Refresh)"; }
+}
+function run(arg){
+  document.getElementById('status').textContent="Running "+arg+"…";
+  apiExec("sh "+SINK+" "+arg+" 2>&1", (out)=>{ setMode(out); apiExec("sh "+SINK+" status 2>&1", setMode); });
+}
+run('status');
+</script>
+</body>
+</html>
