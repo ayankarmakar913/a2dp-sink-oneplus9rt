@@ -28,7 +28,7 @@ You are choosing to flash random root code from the internet onto your phone.
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 
-**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 1 minute** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
+**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 20 seconds** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 
 4. **Commands (root fallback):**
    ```sh
@@ -41,8 +41,8 @@ You are choosing to flash random root code from the internet onto your phone.
    ```
 
 ## No sound / troubleshooting
-- **Any playback problem (quick fix):** on the **9RT, turn the Bluetooth quick-settings tile OFF and ON**, then reconnect and play (wait 10s–1m). If needed, also toggle Bluetooth on the source device.
-- **Wait 10s–1m** after connecting/switching modes — delay can look like no sound.
+- **Any playback problem (quick fix):** on the **9RT, turn the Bluetooth quick-settings tile OFF and ON**, then reconnect and play (wait 10s–20s). If needed, also toggle Bluetooth on the source device.
+- **Wait 10s–20s** after connecting/switching modes — delay can look like no sound.
 - **SINK mode:** open **WebUI** and tap **Restart A2DP Sink**, then reconnect. Fallback: `su -c /data/adb/a2dp-sink restart`.
 - **SOURCE mode codec issues:** **Forget & re-pair** the device on the 9RT and check configured codec.
 - **Diagnosis:**
