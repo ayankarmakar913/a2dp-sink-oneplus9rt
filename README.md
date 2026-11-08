@@ -41,8 +41,8 @@ You are choosing to flash random root code from the internet onto your phone.
    ```
 
 ## No sound / troubleshooting
+- **Any playback problem (quick fix):** on the **9RT, turn the Bluetooth quick-settings tile OFF and ON**, then reconnect and play (wait 10s–1m). If needed, also toggle Bluetooth on the source device.
 - **Wait 10s–1m** after connecting/switching modes — delay can look like no sound.
-- **Quick fix:** toggle **Bluetooth OFF/ON on both the source and receiver (9RT) devices**, then reconnect.
 - **SINK mode:** open **WebUI** and tap **Restart A2DP Sink**, then reconnect. Fallback: `su -c /data/adb/a2dp-sink restart`.
 - **SOURCE mode codec issues:** **Forget & re-pair** the device on the 9RT and check configured codec.
 - **Diagnosis:**
