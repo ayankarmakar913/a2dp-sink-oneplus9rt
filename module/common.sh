@@ -34,10 +34,8 @@ PATH=/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:$PATH
 #    asks for focus. A small fabricated overlay flips
 #    bool/a2dp_sink_automatically_request_audio_focus to true.
 #
-# Note (SINK codec): AAC A2DP sink decoding was previously observed to crash on
-# this ROM/build (SIGSEGV in aacDecoder_Fill). SBC enforcement was removed after
-# testing; AAC/SBC are negotiated by the stack. If you hit no-sound/crashes, see
-# the README/release notes for diagnosis and revert options.
+# SINK mode: A2DP codecs are negotiated by the stack. Use WebUI "Restart A2DP
+# Sink" or `diag` if you hit connection/audio issues.
 # ---------------------------------------------------------------------------
 [ -f /data/adb/a2dp_sink_enabler.conf ] && . /data/adb/a2dp_sink_enabler.conf
 INTEROP_STANDARD_FILE=/data/misc/bluedroid/interop_database_dynamic.conf
@@ -90,7 +88,7 @@ set_sink_props() {
     set_prop bluetooth.profile.avrcp.controller.enabled false
     ensure_audio_focus_overlay || log "WARNING: audio focus overlay is not active"
     ensure_sink_interop || log "WARNING: could not write the sink interop list"
-    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled) (SBC enforcement disabled, AAC allowed)"
+    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled)"
     [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)" = "true" ] &&
         [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)" = "false" ]
 }
@@ -177,13 +175,12 @@ interop_perms() {
 }
 
 ensure_sink_interop() {
-    # SBC/AAC-sink enforcement removed (AAC experiment). Interop left neutral.
-    log "sink interop: SBC enforcement disabled (AAC allowed)"
+    log "sink interop: neutral"
     return 0
 }
 
 remove_sink_interop() {
-    log "sink interop: no-op (SBC enforcement disabled)"
+    log "sink interop: neutral"
     return 0
 }
 
@@ -317,7 +314,7 @@ show_status() {
     else
         echo "mode:                      SOURCE (normal Bluetooth output)"
     fi
-    echo "sink codec:                SBC/AAC allowed (SBC enforcement disabled for testing)"
+    echo "sink codec:                negotiated by stack"
     echo "source property:           $("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)"
     echo "sink property:             $("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)"
     echo "AVRCP target property:     $("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled)"

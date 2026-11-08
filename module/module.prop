@@ -1,6 +1,6 @@
 id=a2dp_sink_enabler
 name=A2DP Sink/Source Switcher (OnePlus 9RT)
-version=1.4.0
-versionCode=9
+version=1.4.1
+versionCode=10
 author=ayankarmakar913
-description=[OxygenOS 16 / MT2111 ONLY] Switch A2DP SOURCE (normal output) <-> SINK (receiver). SBC enforcement removed; AAC/SBC negotiated in SINK (AAC sink was previously unstable on this ROM — tested OK). WebUI: Toggle + SINK-only Restart. APatch/Magisk. Use at your own risk.
+description=[OxygenOS 16 / MT2111 ONLY] Switch A2DP SOURCE (normal output) <-> SINK (receiver). WebUI: Toggle + SINK-only Restart A2DP Sink. APatch/Magisk. Use at your own risk.

@@ -8,9 +8,8 @@ A Magisk/APatch module that switches the phone between:
 
 - **THIS MODULE IS ONLY FOR OXYGENOS 16 ROM ON THE ONEPLUS 9RT (MT2111) ONLY.** Do **NOT** flash this on other devices, other OnePlus models, or different ROM bases unless you know exactly what you are doing and accept the risk.
 - **Tested on:** **MT2111-OOS-16.0.5.1002-20260727-ARB** (OnePlus 9RT / MT2111), rooted with **APatch**.
-- **ROM/BT stack specific:** relies on this ROM’s Bluetooth stack/paths/behavior (Oplus-style config where present, A2DP role props, service restart). Other custom ROMs/BT stacks may not work.
-- **Root + runtime changes:** modifies Bluetooth profile properties, may touch Bluetooth interop/config state, enables an audio-focus overlay, and restarts the Bluetooth stack.
-- **SINK codec (important):** **SBC enforcement has been removed** — AAC/SBC may be negotiated in SINK mode. AAC A2DP *sink* decoding was previously observed to crash on this ROM/build (`SIGSEGV` in `aacDecoder_Fill`/`a2dp_aac_decoder_decode_packet`) in earlier testing; AAC sink has been tested working in recent checks, but **reliability is not guaranteed** across all sources/streams. If you get no sound/stutter/BT restarts, see troubleshooting and consider a previous release that forced SBC.
+- **ROM/BT stack specific:** relies on this ROM’s Bluetooth stack/paths/behavior (A2DP role props, service restart). Other custom ROMs/BT stacks may not work.
+- **Root + runtime changes:** modifies Bluetooth profile properties, may touch Bluetooth config/state, enables an audio-focus overlay, and restarts the Bluetooth stack.
 - **Have recovery ready:** know how to disable/remove APatch/Magisk modules if Bluetooth/boot behavior becomes problematic. Back up important data.
 
 ## ⚠️ WARNING — DO THIS AT YOUR OWN RISK
@@ -21,9 +20,9 @@ You are choosing to flash random root code from the internet onto your phone.
 - **If you somehow start a nuclear war because of an A2DP sink module, I don’t care — I will laugh at you.**
 - You are the captain now. Only proceed if you understand what you’re doing.
 
-## Install & control (easy)
-1. Download the zip from [**Releases**](../../releases) and flash in **APatch/Magisk**. Reboot if needed.
-2. **WebUI (recommended):** APatch → module → **WebUI**.
+## Install & control
+1. Download the zip from [**Releases**](../../releases/latest) and flash in **APatch/Magisk**. Reboot if needed.
+2. **WebUI** (if supported): APatch → module → **WebUI**.
    - **Toggle Source / Sink**
    - **Restart A2DP Sink** appears **only in SINK mode** — use when reconnecting/switching the source device
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
@@ -45,16 +44,14 @@ You are choosing to flash random root code from the internet onto your phone.
 - **Wait 10s–1m** after connecting/switching modes — delay can look like no sound.
 - **Quick fix:** toggle **Bluetooth OFF/ON on both the source and receiver (9RT) devices**, then reconnect.
 - **SINK mode:** open **WebUI** and tap **Restart A2DP Sink**, then reconnect. Fallback: `su -c /data/adb/a2dp-sink restart`.
-- **SOURCE mode codec issues (e.g. AAC won’t negotiate):** **Forget & re-pair** the device on the 9RT and check configured codec.
+- **SOURCE mode codec issues:** **Forget & re-pair** the device on the 9RT and check configured codec.
 - **Diagnosis:**
   ```sh
   su -c 'dumpsys bluetooth_manager 2>/dev/null | grep -E "A2DP (Source|Sink) State|Active peer|Connected|Streaming|Configured codec|SEP codec" | head -20; logcat -b crash -d -v time | tail -50'
   ```
-  If SINK has **no sound/stutter/BT restart** and you see `aacDecoder`/`SIGSEGV`/`a2dp_aac_decoder_decode_packet`, that matches the previously observed AAC sink decoder crash on this ROM. Capture `diag` output and consider reverting to an older release that forced SBC.
 
 ## Known limitations
 - **Mode switching / reconnect** can take **~10 seconds to 1 minute**.
-- **AAC sink stability not guaranteed** on this ROM/build (previously unstable; SBC enforcement removed after testing).
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**
 

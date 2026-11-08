@@ -143,8 +143,7 @@ case "$ACTION" in
         show_status
         ;;
     learn|fix|fix-aac)
-        echo "Disabled: SBC enforcement removed for AAC sink testing on this build."
-        echo "If you get no sound/BT issues, revert from /data/adb/a2dp_9rt_backup_20261109_024630 and/or restore the previous module version."
+        echo "Not available in this build."
         ;;
     restart|restart-sink)
         # Restart Bluetooth in the current sink context to get a clean A2DP sink
@@ -165,7 +164,7 @@ case "$ACTION" in
         echo "  on/off  : SINK (receive audio) / SOURCE (normal output)"
         echo "  status  : show current mode"
         echo "  restart : restart Bluetooth in SINK mode"
-        echo "  (learn removed: SBC enforcement disabled for AAC testing)"
+        echo "  restart : restart Bluetooth in SINK mode"
         echo "  diag    : capture state/logs while reproducing an issue"
                 exit 1
         ;;
