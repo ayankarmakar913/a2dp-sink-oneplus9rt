@@ -29,7 +29,7 @@ You are choosing to flash random root code from the internet onto your phone.
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 
-**After connecting in SINK mode:** it may take a few seconds before music starts playing — wait a bit and it should be fine.
+**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 1 minute** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 4. **Commands (root fallback):**
    ```sh
    su -c /data/adb/a2dp-sink status
@@ -49,6 +49,7 @@ You are choosing to flash random root code from the internet onto your phone.
 
 ## Known limitations
 - **SINK mode:** **AAC sink not supported** (decoder crashes on this ROM) — **SBC is forced** when receiving. **SOURCE mode:** normal output; **AAC/other codecs can work** (SBC not forced by the module in source mode).
+- **Changing SOURCE/SINK mode** restarts Bluetooth and may take **~10 seconds to 1 minute** (and devices may need to reconnect).
 - **After connecting (SINK),** it may take a few seconds before music starts (sometimes up to ~10s).
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**

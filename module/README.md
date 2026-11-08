@@ -19,7 +19,7 @@ On this ROM, the AAC *sink* decoder crashes (`SIGSEGV` in `aacDecoder_Fill`) whe
 2. **Easy control (no commands):** open the module **WebUI** in your manager (if supported). It provides **Toggle Source/Sink** and **Restart A2DP Sink** (shown only in SINK mode). APatch **Action** button also toggles.
 3. Use **WebUI** / **APatch Action** / commands to control mode.
 
-**After connecting in SINK mode:** it may take a few seconds before music starts playing — wait a bit and it should be fine.
+**Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 1 minute** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 
 ## Commands (root)
 ```sh
