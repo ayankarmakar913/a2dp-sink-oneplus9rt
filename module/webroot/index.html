@@ -31,8 +31,8 @@
   <div class="card">
     <button class="primary" id="btn-toggle" onclick="run('toggle')">Toggle Source / Sink</button>
     <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink (reconnect device)</button>
+    <button class="secondary hidden" id="btn-learn" onclick="run('learn')">Fix no-sound device (SBC, SINK)</button>
     <button class="secondary" id="btn-status" onclick="run('status')">Refresh Status</button>
-    <button class="secondary" id="btn-learn" onclick="run('learn')">Learn/Fix New Device (SBC)</button>
   </div>
   <div class="card"><div class="muted">Output</div><div id="status"></div></div>
   <div class="muted">If controls don’t work in this manager, use: <code>su -c /data/adb/a2dp-sink toggle</code> or <code>restart</code>. APatch Action button toggles mode.</div>
@@ -50,10 +50,10 @@ function setMode(text){
   setStatus(text||"");
   const sink=/mode:\s*SINK/i.test(text||"") || /A2DP Sink State:\s*Enabled/i.test(text||"");
   const src=/mode:\s*SOURCE/i.test(text||"") || /A2DP Sink State:\s*Disabled/i.test(text||"");
-  const m=document.getElementById('mode'), r=document.getElementById('restart'), h=document.getElementById('hint');
-  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); h.textContent="Restart Sink is shown only in SINK mode — use it to reconnect a different source device."; }
-  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
-  else { m.textContent="Mode: unknown (tap Refresh)"; if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
+  const m=document.getElementById('mode'), r=document.getElementById('restart'), l=document.getElementById('btn-learn'), h=document.getElementById('hint');
+  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); l.classList.remove('hidden'); h.textContent="SINK-only tools shown: Restart Sink (reconnect source) and Fix no-sound device (forces SBC for a new source)."; }
+  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); l.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
+  else { m.textContent="Mode: unknown (tap Refresh)"; r.classList.add('hidden'); l.classList.add('hidden'); if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
 }
 function cbWrap(fn){
   const id="__a2dp_cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);

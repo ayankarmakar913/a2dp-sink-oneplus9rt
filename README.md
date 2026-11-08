@@ -25,7 +25,7 @@ You are choosing to flash random root code from the internet onto your phone.
 1. Download the zip from [**Releases**](../../releases) and flash in **APatch/Magisk**. Reboot if needed.
 2. **WebUI (recommended):** APatch → module → **WebUI**.
    - **Toggle Source / Sink**
-   - **Restart A2DP Sink** (appears **only in SINK mode**) — use when switching to a different source device
+   - **Restart A2DP Sink** and **Fix no-sound device (SBC)** appear **only in SINK mode** — use when switching to a different source device
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 
@@ -42,7 +42,7 @@ You are choosing to flash random root code from the internet onto your phone.
 ## No sound / troubleshooting
 - **Quick fix:** if you get no sound, **turn Bluetooth OFF and ON once on both the source and receiver (9RT) devices**. This usually fixes it.
 - **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in **SINK mode**) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
-- **SINK mode, new device has no sound:** source may negotiate AAC (AAC *sink* crashes on this ROM). Run `su -c /data/adb/a2dp-sink learn`, then reconnect — negotiated codec should be **SBC**.
+- **SINK mode, new device has no sound:** source may negotiate AAC (AAC *sink* crashes on this ROM). Use WebUI **Fix no-sound device (SBC, SINK)** or run `su -c /data/adb/a2dp-sink learn`, then reconnect — negotiated codec should be **SBC**.
 - **SOURCE mode (9RT sending audio) — AAC/codec issues:** SBC-forcing applies only in SINK mode. If AAC won’t negotiate to a device, **Forget & re-pair** that device on the 9RT and ensure the 9RT isn’t stuck with stale BT codec/interops; then check the configured codec.
 
 
