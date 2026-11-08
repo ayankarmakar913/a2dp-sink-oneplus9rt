@@ -2,17 +2,23 @@
 <html>
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>A2DP Sink/Src</title>
   <style>
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     body{font-family:system-ui,sans-serif;margin:16px;background:#111;color:#eee}
-    .card{background:#1c1c1c;border-radius:12px;padding:14px;margin:10px 0}
-    button{width:100%;padding:14px;margin:8px 0;border:0;border-radius:10px;font-size:16px;font-weight:600}
+    .card{background:#1c1c1c;border-radius:14px;padding:14px;margin:10px 0}
+    button{position:relative;overflow:hidden;width:100%;padding:15px 14px;margin:8px 0;border:0;border-radius:12px;font-size:16px;font-weight:600;color:inherit;cursor:pointer;touch-action:manipulation;transition:transform .08s ease,filter .12s ease,opacity .12s ease;box-shadow:0 1px 0 rgba(255,255,255,.04) inset}
+    button::after{content:"";position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .12s ease;pointer-events:none}
+    button.pressed{transform:scale(.97);filter:brightness(1.18)}
+    button.pressed::after{background:rgba(255,255,255,.10)}
+    button:active{transform:scale(.97);filter:brightness(1.18)}
+    button.busy{opacity:.55}
     .primary{background:#2d7ff9;color:#fff}
     .warn{background:#f39c12;color:#111}
     .secondary{background:#333;color:#eee}
     .muted{color:#aaa;font-size:13px;line-height:1.35}
-    #status{white-space:pre-wrap;font-family:monospace;font-size:12px;color:#bdb}
+    #status{white-space:pre-wrap;font-family:monospace;font-size:12px;color:#bdb;min-height:2em}
     .hidden{display:none}
   </style>
 </head>
@@ -23,44 +29,60 @@
     <div class="muted" id="hint"></div>
   </div>
   <div class="card">
-    <button class="primary" id="toggle" onclick="run('toggle')">Toggle Source / Sink</button>
+    <button class="primary" id="btn-toggle" onclick="run('toggle')">Toggle Source / Sink</button>
     <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink (reconnect device)</button>
-    <button class="secondary" onclick="run('status')">Refresh Status</button>
-    <button class="secondary" onclick="run('learn')">Learn/Fix New Device (SBC)</button>
+    <button class="secondary" id="btn-status" onclick="run('status')">Refresh Status</button>
+    <button class="secondary" id="btn-learn" onclick="run('learn')">Learn/Fix New Device (SBC)</button>
   </div>
   <div class="card"><div class="muted">Output</div><div id="status"></div></div>
-  <div class="muted">If buttons don’t work, your manager may not support module WebUI exec. Use: <code>su -c /data/adb/a2dp-sink toggle</code> / <code>restart</code>.</div>
+  <div class="muted">If controls don’t work in this manager, use: <code>su -c /data/adb/a2dp-sink toggle</code> or <code>restart</code>. APatch Action button toggles mode.</div>
 <script>
 const SINK="/data/adb/a2dp-sink";
+document.querySelectorAll('button').forEach(b=>{
+  const down=()=>b.classList.add('pressed');
+  const up=()=>b.classList.remove('pressed');
+  ['pointerdown','touchstart','mousedown'].forEach(e=>b.addEventListener(e,down,{passive:true}));
+  ['pointerup','pointercancel','pointerleave','touchend','touchcancel','mouseup','mouseleave','blur'].forEach(e=>b.addEventListener(e,up,{passive:true}));
+});
+function setStatus(t){ document.getElementById('status').textContent=t||""; }
+function busy(on){ document.querySelectorAll('button').forEach(b=>b.classList.toggle('busy',!!on)); }
+function setMode(text){
+  setStatus(text||"");
+  const sink=/mode:\s*SINK/i.test(text||"") || /A2DP Sink State:\s*Enabled/i.test(text||"");
+  const src=/mode:\s*SOURCE/i.test(text||"") || /A2DP Sink State:\s*Disabled/i.test(text||"");
+  const m=document.getElementById('mode'), r=document.getElementById('restart'), h=document.getElementById('hint');
+  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); h.textContent="Restart Sink is shown only in SINK mode — use it to reconnect a different source device."; }
+  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
+  else { m.textContent="Mode: unknown (tap Refresh)"; if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
+}
+function cbWrap(fn){
+  const id="__a2dp_cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
+  window[id]=function(){ try{ fn.apply(null, arguments); } finally { try{ delete window[id]; }catch(e){} } };
+  return id;
+}
 function apiExec(cmd, cb){
   try{
-    if(typeof ksu!=='undefined' && ksu.exec){
-      const id="cb"+Date.now()+Math.random();
-      window[id]=(c,o,e)=>cb(o||e||"");
-      ksu.exec(cmd,"{}",id); return;
+    const obj = (typeof ksu!=='undefined'&&ksu) ? ksu : (typeof apatch!=='undefined'&&apatch) ? apatch : (typeof kernelsu!=='undefined'&&kernelsu) ? kernelsu : null;
+    if(obj && typeof obj.exec==='function'){
+      const done=(a,b,c)=>{
+        if(typeof a==='string' && b===undefined && c===undefined) return cb(a);
+        cb((b!=null?String(b):"") + (c?("\n"+c):""));
+      };
+      const id=cbWrap(done);
+      let r;
+      try{ r=obj.exec(cmd, "{}", id); }catch(e1){ try{ r=obj.exec(cmd, id); }catch(e2){ try{ r=obj.exec(cmd); }catch(e3){} } }
+      if(r && typeof r.then==='function'){ r.then(v=>cb(typeof v==='string'?v:JSON.stringify(v))).catch(e=>cb(String(e))); return; }
+      if(typeof r==='string'){ cb(r); return; }
+      setTimeout(()=>{}, 0);
+      return;
     }
-    if(typeof apatch!=='undefined' && apatch.exec){
-      const id="cb"+Date.now()+Math.random();
-      window[id]=(c,o,e)=>cb(o||e||"");
-      apatch.exec(cmd,"{}",id); return;
-    }
-    if(typeof globalThis.ksu?.exec==='function'){ globalThis.ksu.exec(cmd,"{}",(c,o,e)=>cb(o||e||"")); return; }
-  }catch(e){}
-  cb("WebUI exec API not available in this manager.\nRun manually:\n"+cmd);
-}
-function setMode(text){
-  document.getElementById('status').textContent=text||"";
-  const sink=/mode:\s*SINK/i.test(text) || /A2DP Sink State:\s*Enabled/i.test(text);
-  const src=/mode:\s*SOURCE/i.test(text) || /A2DP Sink State:\s*Disabled/i.test(text);
-  const m=document.getElementById('mode');
-  const r=document.getElementById('restart');
-  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); document.getElementById('hint').textContent="Restart Sink helps when switching to a different source device."; }
-  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); document.getElementById('hint').textContent="Toggle to SINK to receive audio from another device."; }
-  else { m.textContent="Mode: unknown (tap Refresh)"; }
+  }catch(e){ cb("WebUI error: "+e+"\n\nRun manually:\n"+cmd); return; }
+  cb("WebUI exec API not available in this manager.\n\nUse APatch Action button (toggle), or run:\n"+cmd);
 }
 function run(arg){
-  document.getElementById('status').textContent="Running "+arg+"…";
-  apiExec("sh "+SINK+" "+arg+" 2>&1", (out)=>{ setMode(out); apiExec("sh "+SINK+" status 2>&1", setMode); });
+  busy(true);
+  setStatus("Running: "+arg+" … (if this stays, WebUI exec is unavailable — use Action button / terminal)");
+  apiExec("sh "+SINK+" "+arg+" 2>&1; echo; echo ---; sh "+SINK+" status 2>&1", (out)=>{ busy(false); setMode(out); });
 }
 run('status');
 </script>

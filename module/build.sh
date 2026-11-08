@@ -18,6 +18,7 @@ zip -9r "$OUT" \
     uninstall.sh \
     common.sh \
     README.md \
+    LICENSE \
     webroot
 
 echo "Built: $(cd .. && pwd)/$(basename "$OUT")"
