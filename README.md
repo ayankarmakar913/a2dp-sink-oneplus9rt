@@ -8,9 +8,9 @@ A Magisk/APatch module that switches the phone between:
 
 - **THIS MODULE IS ONLY FOR OXYGENOS 16 ROM ON THE ONEPLUS 9RT (MT2111) ONLY.** Do **NOT** flash this on other devices, other OnePlus models, or different ROM bases unless you know exactly what you are doing and accept the risk.
 - **Tested on:** **MT2111-OOS-16.0.5.1002-20260727-ARB** (OnePlus 9RT / MT2111), rooted with **APatch**.
-- **ROM/BT stack specific:** relies on this ROM’s Bluetooth stack/paths/behavior (Oplus-style interop/config, A2DP role props, service restart). Other custom ROMs/BT stacks may not work.
-- **Root + system-level changes:** modifies Bluetooth profile properties, writes interop config, enables an overlay, and restarts the Bluetooth stack.
-- **AAC *sink* (receiving) is broken on this ROM:** in **SINK mode** the module forces **SBC** to avoid the AAC sink decoder crash. **SOURCE mode** (normal output) is unaffected and can use **AAC/other supported codecs** to your headphones/devices.
+- **ROM/BT stack specific:** relies on this ROM’s Bluetooth stack/paths/behavior (Oplus-style config where present, A2DP role props, service restart). Other custom ROMs/BT stacks may not work.
+- **Root + runtime changes:** modifies Bluetooth profile properties, may touch Bluetooth interop/config state, enables an audio-focus overlay, and restarts the Bluetooth stack.
+- **SINK codec (important):** **SBC enforcement has been removed** — AAC/SBC may be negotiated in SINK mode. AAC A2DP *sink* decoding was previously observed to crash on this ROM/build (`SIGSEGV` in `aacDecoder_Fill`/`a2dp_aac_decoder_decode_packet`) in earlier testing; AAC sink has been tested working in recent checks, but **reliability is not guaranteed** across all sources/streams. If you get no sound/stutter/BT restarts, see troubleshooting and consider a previous release that forced SBC.
 - **Have recovery ready:** know how to disable/remove APatch/Magisk modules if Bluetooth/boot behavior becomes problematic. Back up important data.
 
 ## ⚠️ WARNING — DO THIS AT YOUR OWN RISK
@@ -25,32 +25,36 @@ You are choosing to flash random root code from the internet onto your phone.
 1. Download the zip from [**Releases**](../../releases) and flash in **APatch/Magisk**. Reboot if needed.
 2. **WebUI (recommended):** APatch → module → **WebUI**.
    - **Toggle Source / Sink**
-   - **Restart A2DP Sink** and **Fix no-sound device (SBC)** appear **only in SINK mode** — use when switching to a different source device
+   - **Restart A2DP Sink** appears **only in SINK mode** — use when reconnecting/switching the source device
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 
 **Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10 seconds to 1 minute** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
+
 4. **Commands (root fallback):**
    ```sh
    su -c /data/adb/a2dp-sink status
    su -c /data/adb/a2dp-sink toggle    # Source <-> Sink
+   su -c /data/adb/a2dp-sink on        # SINK (receiver)
+   su -c /data/adb/a2dp-sink off       # SOURCE (normal output)
    su -c /data/adb/a2dp-sink restart   # restart Bluetooth in SINK mode
-   su -c /data/adb/a2dp-sink learn     # fix a new device with no sound, then reconnect
-   su -c '/data/adb/a2dp-sink learn AA:BB:CC:DD:EE:FF'
+   su -c /data/adb/a2dp-sink diag [60] # capture logs/state
    ```
 
 ## No sound / troubleshooting
-- **Quick fix:** if you get no sound, **turn Bluetooth OFF and ON once on both the source and receiver (9RT) devices**. This usually fixes it.
-- **If still no sound:** open **Magisk/APatch → module → WebUI** and tap **Restart A2DP Sink** (in **SINK mode**) once, then reconnect. (Fallback: `su -c /data/adb/a2dp-sink restart`)
-- **SINK mode, new device has no sound:** source may negotiate AAC (AAC *sink* crashes on this ROM). Use WebUI **Fix no-sound device (SBC, SINK)** or run `su -c /data/adb/a2dp-sink learn`, then reconnect — negotiated codec should be **SBC**.
-- **SOURCE mode (9RT sending audio) — AAC/codec issues:** SBC-forcing applies only in SINK mode. If AAC won’t negotiate to a device, **Forget & re-pair** that device on the 9RT and ensure the 9RT isn’t stuck with stale BT codec/interops; then check the configured codec.
-
-
+- **Wait 10s–1m** after connecting/switching modes — delay can look like no sound.
+- **Quick fix:** toggle **Bluetooth OFF/ON on both the source and receiver (9RT) devices**, then reconnect.
+- **SINK mode:** open **WebUI** and tap **Restart A2DP Sink**, then reconnect. Fallback: `su -c /data/adb/a2dp-sink restart`.
+- **SOURCE mode codec issues (e.g. AAC won’t negotiate):** **Forget & re-pair** the device on the 9RT and check configured codec.
+- **Diagnosis:**
+  ```sh
+  su -c 'dumpsys bluetooth_manager 2>/dev/null | grep -E "A2DP (Source|Sink) State|Active peer|Connected|Streaming|Configured codec|SEP codec" | head -20; logcat -b crash -d -v time | tail -50'
+  ```
+  If SINK has **no sound/stutter/BT restart** and you see `aacDecoder`/`SIGSEGV`/`a2dp_aac_decoder_decode_packet`, that matches the previously observed AAC sink decoder crash on this ROM. Capture `diag` output and consider reverting to an older release that forced SBC.
 
 ## Known limitations
-- **SINK mode:** **AAC sink not supported** (decoder crashes on this ROM) — **SBC is forced** when receiving. **SOURCE mode:** normal output; **AAC/other codecs can work** (SBC not forced by the module in source mode).
-- **Changing SOURCE/SINK mode** restarts Bluetooth and may take **~10 seconds to 1 minute** (and devices may need to reconnect).
-- **After connecting (SINK),** it may take a few seconds before music starts (sometimes up to ~10s).
+- **Mode switching / reconnect** can take **~10 seconds to 1 minute**.
+- **AAC sink stability not guaranteed** on this ROM/build (previously unstable; SBC enforcement removed after testing).
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**
 

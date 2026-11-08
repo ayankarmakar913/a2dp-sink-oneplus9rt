@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # Action button / command-line helper.
-# Usage: action.sh [toggle|on|off|status|diag [seconds]|learn [addr]|restart]   (default: toggle)
+# Usage: action.sh [toggle|on|off|status|diag [seconds]|restart]   (default: toggle)
 #
 # on   = SINK mode (phone receives audio; Bluetooth output disabled)
 # off  = SOURCE mode (normal Bluetooth output; sink disabled)
@@ -143,31 +143,8 @@ case "$ACTION" in
         show_status
         ;;
     learn|fix|fix-aac)
-        # Learn bonded/active source addresses and force SBC for them (fixes AAC
-        # sink decoder crashes on this ROM). Usage: action.sh learn [aa:bb:cc:dd:ee:ff]
-        _addr=${2:-}
-        if [ -n "$_addr" ]; then
-            _p=$(echo "$_addr" | tr 'A-F' 'a-f' | awk -F: '{if(NF>=3) print $1":"$2":"$3}')
-            if [ -n "$_p" ]; then
-                _cur=""; [ -f "$LEARNED_INTEROP_FILE" ] && . "$LEARNED_INTEROP_FILE" 2>/dev/null && _cur=$A2DP_SINK_LEARNED
-                printf 'A2DP_SINK_LEARNED=%s\n' "$(echo "${_cur},${_p}" | tr ',' '\n' | awk 'NF && !seen[$0]++{out=(out==""?$0:out "," $0)} END{print out}')" > "$LEARNED_INTEROP_FILE"
-                echo "Learned prefix: $_p"
-            else
-                echo "Invalid address: $_addr"
-                exit 1
-            fi
-        fi
-        echo "Learning A2DP source addresses and forcing SBC..."
-        _disc=$(discover_sink_blacklist_addrs 2>/dev/null | tr '\n' ',' | sed 's/,$//')
-        [ -n "$_disc" ] && echo "Discovered prefixes: $_disc"
-        ensure_sink_interop || { echo "Could not update interop config."; exit 1; }
-        if [ "$(current_mode)" = "sink" ]; then
-            echo "Restarting Bluetooth to apply SBC codec policy..."
-            restart_bluetooth sink || true
-        else
-            echo "Applied (SOURCE mode; will take effect in SINK mode)."
-        fi
-        show_status
+        echo "Disabled: SBC enforcement removed for AAC sink testing on this build."
+        echo "If you get no sound/BT issues, revert from /data/adb/a2dp_9rt_backup_20261109_024630 and/or restore the previous module version."
         ;;
     restart|restart-sink)
         # Restart Bluetooth in the current sink context to get a clean A2DP sink
@@ -183,12 +160,12 @@ case "$ACTION" in
         echo "Sink restarted. Reconnect the source device you want to use."
         ;;
     *)
-        echo "Usage: $0 [toggle|on|off|status|diag [seconds]|learn [addr]|restart]"
+        echo "Usage: $0 [toggle|on|off|status|diag [seconds]|restart]"
         echo "  toggle  : switch between SOURCE and SINK mode"
         echo "  on/off  : SINK (receive audio) / SOURCE (normal output)"
         echo "  status  : show current mode"
         echo "  restart : restart Bluetooth in SINK mode"
-        echo "  learn   : force SBC for bonded/active sources (fixes no-sound/AAC crash)"
+        echo "  (learn removed: SBC enforcement disabled for AAC testing)"
         echo "  diag    : capture state/logs while reproducing an issue"
                 exit 1
         ;;

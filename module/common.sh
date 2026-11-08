@@ -34,21 +34,11 @@ PATH=/data/adb/ap/bin:/data/adb/ksu/bin:/data/adb/magisk:/debug_ramdisk:$PATH
 #    asks for focus. A small fabricated overlay flips
 #    bool/a2dp_sink_automatically_request_audio_focus to true.
 #
-# 2. AAC sink decoder crash
-#    The stock AAC sink decoder on this ROM crashes with SIGSEGV in
-#    aacDecoder_Fill() as soon as a source sends AAC. The Bluetooth stack's
-#    interop database can disable AAC for selected source devices, which
-#    makes the source negotiate SBC instead. List the source devices you use
-#    as comma-separated Bluetooth address prefixes. Override it by creating
-#    /data/adb/a2dp_sink_enabler.conf with:
-#        A2DP_SINK_AAC_BLACKLIST=aa:bb:cc,dd:ee:ff
+# Note (SINK codec): AAC A2DP sink decoding was previously observed to crash on
+# this ROM/build (SIGSEGV in aacDecoder_Fill). SBC enforcement was removed after
+# testing; AAC/SBC are negotiated by the stack. If you hit no-sound/crashes, see
+# the README/release notes for diagnosis and revert options.
 # ---------------------------------------------------------------------------
-# Comma-separated Bluetooth address prefixes to force SBC for in SINK mode.
-# AAC sink decoding is broken on this ROM (SIGSEGV in aacDecoder_Fill), so
-# sources that negotiate AAC produce no sound. SBC is forced via interop.
-# Default includes known-good prefixes and is extended dynamically from bonded
-# devices and the active peer. Override in /data/adb/a2dp_sink_enabler.conf.
-A2DP_SINK_AAC_BLACKLIST=${A2DP_SINK_AAC_BLACKLIST:-22:22:47,22:22:02}
 [ -f /data/adb/a2dp_sink_enabler.conf ] && . /data/adb/a2dp_sink_enabler.conf
 INTEROP_STANDARD_FILE=/data/misc/bluedroid/interop_database_dynamic.conf
 INTEROP_OPLUS_FILE=/data/misc/bluedroid/bt_oplus_iot_list.conf
@@ -100,7 +90,7 @@ set_sink_props() {
     set_prop bluetooth.profile.avrcp.controller.enabled false
     ensure_audio_focus_overlay || log "WARNING: audio focus overlay is not active"
     ensure_sink_interop || log "WARNING: could not write the sink interop list"
-    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled) aac_blacklist=$A2DP_SINK_AAC_BLACKLIST"
+    log "mode=sink props: source=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled) sink=$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled) avrcp.target=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled) avrcp.controller=$("$ANDROID_GETPROP" bluetooth.profile.avrcp.controller.enabled) (SBC enforcement disabled, AAC allowed)"
     [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)" = "true" ] &&
         [ "$("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)" = "false" ]
 }
@@ -183,151 +173,17 @@ interop_perms() {
     [ -f "$1" ] || return 0
     chown bluetooth:bluetooth "$1" 2>/dev/null || true
     chmod 660 "$1" 2>/dev/null || true
-    [ -x /system/bin/chcon ] &&
-        /system/bin/chcon u:object_r:bluetooth_data_file:s0 "$1" 2>/dev/null || true
+    [ -x /system/bin/chcon ] && /system/bin/chcon u:object_r:bluetooth_data_file:s0 "$1" 2>/dev/null || true
 }
 
-# Collect Bluetooth address prefixes (first 3 octets) from bonded devices and
-# the current A2DP sink peer. Output is comma-separated, lowercase.
-discover_sink_blacklist_addrs() {
-    {
-        # Bonded device section headers in bt_config.conf
-        [ -f /data/misc/bluedroid/bt_config.conf ] &&
-            grep -oE '^\[([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\]' /data/misc/bluedroid/bt_config.conf 2>/dev/null |
-            tr -d '[]'
-        # Active sink peer
-        "$ANDROID_DUMPSYS" bluetooth_manager 2>/dev/null |
-            awk '/A2DP Sink State/{f=1} f && /Active peer:/{print $3; exit}'
-    } 2>/dev/null | awk '
-        function lc(s,   r,i,c) { r=""; for(i=1;i<=length(s);i++){c=substr(s,i,1); if(c>="A"&&c<="Z") c=sprintf("%c",index("ABCDEFGHIJKLMNOPQRSTUVWXYZ",c)+96); r=r c} return r }
-        /^[0-9A-Fa-f][0-9A-Fa-f]:/ {
-            a=lc($1); if(a=="00:00:00:00:00:00") next;
-            n=split(a,p,":"); if(n>=3){p3=p[1]":"p[2]":"p[3]; if(!(p3 in seen)){seen[p3]=1; print p3}}
-        }'
-}
-
-_ensure_oplus_blacklist_section() {
-    _sec=$1; _list=$2; _f=$3
-    [ -f "$_f" ] || : > "$_f"
-    if ! grep -q "^\\[${_sec}\\]" "$_f"; then
-        printf '\n[%s]\nAddressBlacklist = %s\n' "$_sec" "$_list" >> "$_f"
-        return 0
-    fi
-    _tmp="${_f}.a2dp_tmp"
-    awk -v sec="[${_sec}]" -v add="$_list" '
-        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-        BEGIN { n = split(add, a, ","); for (i = 1; i <= n; i++) want[trim(a[i])] = 1 }
-        /^\[/ { insec = ($0 == sec); print; next }
-        insec && /^[ \t]*AddressBlacklist[ \t]*=/ {
-            line = $0; sub(/^[^=]*=[ \t]*/, "", line)
-            m = split(line, v, ","); out = ""
-            for (i = 1; i <= m; i++) { x = trim(v[i]); if (x != "" && !(x in seen)) { seen[x]=1; out=(out==""?x:out "," x) } }
-            for (x in want) { if (!(x in seen)) { seen[x]=1; out=(out==""?x:out "," x) } }
-            print "AddressBlacklist = " out; next
-        }
-        { print }
-    ' "$_f" > "$_tmp" && mv "$_tmp" "$_f"
-    if ! awk -v sec="[${_sec}]" '/^\[/ { insec = ($0 == sec) } insec && /^[ \t]*AddressBlacklist[ \t]*=/ { found = 1 } END { exit(found ? 0 : 1) }' "$_f"; then
-        sed -i "/^\\[${_sec}\\]$/a AddressBlacklist = $_list" "$_f"
-    fi
-}
-
-_remove_oplus_blacklist_section() {
-    _sec=$1; _list=$2; _f=$3
-    [ -f "$_f" ] || return 0
-    _tmp="${_f}.a2dp_tmp"
-    awk -v sec="[${_sec}]" -v remove="$_list" '
-        function trim(s) { gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
-        BEGIN { n = split(remove, a, ","); for (i = 1; i <= n; i++) drop[trim(a[i])] = 1 }
-        /^\[/ { insec = ($0 == sec); print; next }
-        insec && /^[ \t]*AddressBlacklist[ \t]*=/ {
-            line = $0; sub(/^[^=]*=[ \t]*/, "", line)
-            m = split(line, v, ","); out = ""
-            for (i = 1; i <= m; i++) { x = trim(v[i]); if (x != "" && !(x in drop)) out=(out==""?x:out "," x) }
-            if (out != "") print "AddressBlacklist = " out; next
-        }
-        { print }
-    ' "$_f" > "$_tmp" && mv "$_tmp" "$_f"
-}
-
-LEARNED_INTEROP_FILE=/data/adb/a2dp_sink_learned.conf
-
-_all_sink_interop_addrs() {
-    _base=$(echo "$A2DP_SINK_AAC_BLACKLIST" | tr -d ' ')
-    _learned=""
-    [ -f "$LEARNED_INTEROP_FILE" ] && . "$LEARNED_INTEROP_FILE" 2>/dev/null &&
-        _learned=$(echo "$A2DP_SINK_LEARNED" | tr -d ' ')
-    _disc=$(discover_sink_blacklist_addrs 2>/dev/null | tr '\n' ',' | sed 's/,$//')
-    echo "${_base},${_learned},${_disc}" | awk -F, '{
-        for(i=1;i<=NF;i++){gsub(/^[ \t]+|[ \t]+$/,"",$i); if($i!="" && !seen[$i]++){out=(out==""?$i:out "," $i)}}
-        print out
-    }'
-}
-
-_save_learned_interop_addrs() {
-    _all=$(_all_sink_interop_addrs)
-    [ -n "$_all" ] || return 0
-    printf 'A2DP_SINK_LEARNED=%s\n' "$_all" > "$LEARNED_INTEROP_FILE" 2>/dev/null || true
-}
-
-# Add configured/discovered source devices to Bluetooth interop databases and
-# force SBC instead of the crashing AAC sink decoder.
 ensure_sink_interop() {
-    [ -d /data/misc/bluedroid ] || return 1
-
-    _list=$(_all_sink_interop_addrs)
-    [ -n "$_list" ] || return 1
-    _save_learned_interop_addrs
-
-    # Standard AOSP dynamic interop database.
-    _f=$INTEROP_STANDARD_FILE
-    [ -f "$_f" ] || : > "$_f"
-    if ! grep -q '^\[INTEROP_DISABLE_AAC_CODEC\]' "$_f"; then
-        printf '\n[INTEROP_DISABLE_AAC_CODEC]\n' >> "$_f"
-    fi
-    _old_ifs=$IFS
-    IFS=,
-    for _addr in $_list; do
-        [ -n "$_addr" ] || continue
-        grep -q "^${_addr} = Address_Based$" "$_f" 2>/dev/null ||
-            sed -i "/^\[INTEROP_DISABLE_AAC_CODEC\]$/a ${_addr} = Address_Based" "$_f" 2>/dev/null || true
-    done
-    IFS=$_old_ifs
-    interop_perms "$_f"
-
-    # Oplus interop lists (try both feature names found in this ROM).
-    _f=$INTEROP_OPLUS_FILE
-    _ensure_oplus_blacklist_section OplusA2dpDisableAacCodec "$_list" "$_f"
-    _ensure_oplus_blacklist_section OplusA2dpResponseOnlySbc "$_list" "$_f"
-    interop_perms "$_f"
-
-    log "sink interop: SBC forced for ${_list}"
+    # SBC/AAC-sink enforcement removed (AAC experiment). Interop left neutral.
+    log "sink interop: SBC enforcement disabled (AAC allowed)"
     return 0
 }
 
-# Undo the interop entries when switching back to SOURCE mode.
 remove_sink_interop() {
-    _list=$(_all_sink_interop_addrs)
-    [ -n "$_list" ] || return 0
-
-    _f=$INTEROP_STANDARD_FILE
-    if [ -f "$_f" ]; then
-        _old_ifs=$IFS
-        IFS=,
-        for _addr in $_list; do
-            [ -n "$_addr" ] || continue
-            sed -i "/^${_addr} = Address_Based$/d" "$_f" 2>/dev/null || true
-        done
-        IFS=$_old_ifs
-        interop_perms "$_f"
-    fi
-
-    _f=$INTEROP_OPLUS_FILE
-    _remove_oplus_blacklist_section OplusA2dpDisableAacCodec "$_list" "$_f"
-    _remove_oplus_blacklist_section OplusA2dpResponseOnlySbc "$_list" "$_f"
-    interop_perms "$_f"
-
-    log "sink interop: SBC-forcing entries removed"
+    log "sink interop: no-op (SBC enforcement disabled)"
     return 0
 }
 
@@ -461,7 +317,7 @@ show_status() {
     else
         echo "mode:                      SOURCE (normal Bluetooth output)"
     fi
-    echo "sink codec:                SBC (forced; AAC sink is broken on this ROM)"
+    echo "sink codec:                SBC/AAC allowed (SBC enforcement disabled for testing)"
     echo "source property:           $("$ANDROID_GETPROP" bluetooth.profile.a2dp.source.enabled)"
     echo "sink property:             $("$ANDROID_GETPROP" bluetooth.profile.a2dp.sink.enabled)"
     echo "AVRCP target property:     $("$ANDROID_GETPROP" bluetooth.profile.avrcp.target.enabled)"

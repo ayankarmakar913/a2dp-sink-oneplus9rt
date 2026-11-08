@@ -31,11 +31,10 @@
   <div class="card">
     <button class="primary" id="btn-toggle" onclick="run('toggle')">Toggle Source / Sink</button>
     <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink (reconnect device)</button>
-    <button class="secondary hidden" id="btn-learn" onclick="run('learn')">Fix no-sound device (SBC, SINK)</button>
     <button class="secondary" id="btn-status" onclick="run('status')">Refresh Status</button>
   </div>
   <div class="card"><div class="muted">Output</div><div id="status"></div></div>
-  <div class="muted">If controls don’t work in this manager, use: <code>su -c /data/adb/a2dp-sink toggle</code> or <code>restart</code>. APatch Action button toggles mode.</div>
+  <div class="muted">SOURCE: normal output. SINK: receives audio (SBC enforcement removed; AAC/SBC negotiated). Mode switch/reconnect can take ~10s–1m. Fallback: <code>su -c /data/adb/a2dp-sink toggle|restart|status</code></div>
 <script>
 const SINK="/data/adb/a2dp-sink";
 document.querySelectorAll('button').forEach(b=>{
@@ -50,10 +49,10 @@ function setMode(text){
   setStatus(text||"");
   const sink=/mode:\s*SINK/i.test(text||"") || /A2DP Sink State:\s*Enabled/i.test(text||"");
   const src=/mode:\s*SOURCE/i.test(text||"") || /A2DP Sink State:\s*Disabled/i.test(text||"");
-  const m=document.getElementById('mode'), r=document.getElementById('restart'), l=document.getElementById('btn-learn'), h=document.getElementById('hint');
-  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); l.classList.remove('hidden'); h.textContent="SINK-only tools shown: Restart Sink (reconnect source) and Fix no-sound device (forces SBC for a new source)."; }
-  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); l.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
-  else { m.textContent="Mode: unknown (tap Refresh)"; r.classList.add('hidden'); l.classList.add('hidden'); if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
+  const m=document.getElementById('mode'), r=document.getElementById('restart'), h=document.getElementById('hint');
+  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); h.textContent="Restart Sink shown only in SINK mode — use it to reconnect a different source device."; }
+  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
+  else { m.textContent="Mode: unknown (tap Refresh)"; r.classList.add('hidden'); if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
 }
 function cbWrap(fn){
   const id="__a2dp_cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);
@@ -64,17 +63,12 @@ function apiExec(cmd, cb){
   try{
     const obj = (typeof ksu!=='undefined'&&ksu) ? ksu : (typeof apatch!=='undefined'&&apatch) ? apatch : (typeof kernelsu!=='undefined'&&kernelsu) ? kernelsu : null;
     if(obj && typeof obj.exec==='function'){
-      const done=(a,b,c)=>{
-        if(typeof a==='string' && b===undefined && c===undefined) return cb(a);
-        cb((b!=null?String(b):"") + (c?("\n"+c):""));
-      };
-      const id=cbWrap(done);
-      let r;
+      const done=(a,b,c)=>{ if(typeof a==='string' && b===undefined && c===undefined) return cb(a); cb((b!=null?String(b):"") + (c?("\n"+c):"")); };
+      const id=cbWrap(done); let r;
       try{ r=obj.exec(cmd, "{}", id); }catch(e1){ try{ r=obj.exec(cmd, id); }catch(e2){ try{ r=obj.exec(cmd); }catch(e3){} } }
       if(r && typeof r.then==='function'){ r.then(v=>cb(typeof v==='string'?v:JSON.stringify(v))).catch(e=>cb(String(e))); return; }
       if(typeof r==='string'){ cb(r); return; }
-      setTimeout(()=>{}, 0);
-      return;
+      setTimeout(()=>{}, 0); return;
     }
   }catch(e){ cb("WebUI error: "+e+"\n\nRun manually:\n"+cmd); return; }
   cb("WebUI exec API not available in this manager.\n\nUse APatch Action button (toggle), or run:\n"+cmd);
