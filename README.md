@@ -51,7 +51,7 @@ You are choosing to flash random root code from the internet onto your phone.
   ```
 
 ## Known limitations
-- **Mode switching / reconnect** can take **~10 seconds to 1 minute**.
+- **Mode switching / reconnect** can take **~10 seconds to 20 seconds**.
 - **Multipoint handover is flaky** on this vendor stack. Use **Restart A2DP Sink** / reconnect the device you want.
 - **Not simultaneous source+sink** (exclusive modes). **ROM compatibility is limited.**
 
