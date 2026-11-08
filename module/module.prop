@@ -1,0 +1,6 @@
+id=a2dp_sink_enabler
+name=A2DP Sink Mode Switcher
+version=1.3.0
+versionCode=4
+author=OpenCode
+description=Switches between normal Bluetooth A2DP output (SOURCE) and A2DP sink/receiver (SINK) on rooted OnePlus 9RT/ColorOS 16. Forces SBC for sink sources to avoid this ROM's AAC sink decoder crash, learns new source devices (action.sh learn), includes diag and restart commands. Commands: /data/adb/a2dp-sink [toggle|on|off|status|learn|restart|diag]. Tested on MT2111, Android 16.
