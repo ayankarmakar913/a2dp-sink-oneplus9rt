@@ -27,9 +27,10 @@ su -c /data/adb/a2dp-sink diag [60]  # capture logs/state while reproducing an i
 ```
 
 ## No sound / troubleshooting
-- **Any playback problem (quick fix):** on the **9RT, turn the Bluetooth quick-settings tile OFF and ON**, then reconnect and play (wait 10s–1m). If needed, also toggle Bluetooth on the source device.
-- **Wait 10s–1m** after connecting/switching modes — delay can look like no sound.
-- **SINK mode:** open **WebUI** and tap **Restart A2DP Sink**, then reconnect. Fallback: `su -c /data/adb/a2dp-sink restart`.
+- **Any playback problem (quick fix):** on the **9RT, turn the Bluetooth quick-settings tile OFF and ON**, then reconnect and play (wait ~10–20s). If needed, also toggle Bluetooth on the source device.
+- **Switching to a different source device (SINK):** disconnect the current device, then connect the other one. If it doesn’t switch/play properly, use **WebUI → Restart A2DP Sink** (SINK mode) or toggle the **9RT Bluetooth tile OFF/ON**, then reconnect.
+- **Wait ~10–20s** after connecting/switching modes — delay can look like no sound.
+
 - **SOURCE mode codec issues:** if a target device won’t negotiate as expected, **Forget & re-pair** it on the 9RT and check configured codec.
 - Diagnostics:
 ```sh
