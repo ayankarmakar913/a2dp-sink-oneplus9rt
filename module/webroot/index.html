@@ -30,7 +30,7 @@
   </div>
   <div class="card">
     <button class="primary" id="btn-toggle" onclick="run('toggle')">Toggle Source / Sink</button>
-    <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink (reconnect device)</button>
+    <button class="warn hidden" id="restart" onclick="run('restart')">Restart A2DP Sink</button>
     <button class="secondary" id="btn-status" onclick="run('status')">Refresh Status</button>
   </div>
   <div class="card"><div class="muted">Output</div><div id="status"></div></div>
@@ -49,10 +49,10 @@ function setMode(text){
   setStatus(text||"");
   const sink=/mode:\s*SINK/i.test(text||"") || /A2DP Sink State:\s*Enabled/i.test(text||"");
   const src=/mode:\s*SOURCE/i.test(text||"") || /A2DP Sink State:\s*Disabled/i.test(text||"");
-  const m=document.getElementById('mode'), r=document.getElementById('restart'), h=document.getElementById('hint');
-  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); h.textContent="Restart Sink shown only in SINK mode — use it to reconnect a different source device."; }
-  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
-  else { m.textContent="Mode: unknown (tap Refresh)"; r.classList.add('hidden'); if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
+  const m=document.getElementById('mode'), r=document.getElementById('restart'), h=document.getElementById('hint'), t=document.getElementById('btn-toggle');
+  if(sink){ m.textContent="Mode: SINK (receiver)"; r.classList.remove('hidden'); t.textContent="Toggle Source"; h.textContent="Restart Sink shown only in SINK mode — use it to reconnect a different source device."; }
+  else if(src){ m.textContent="Mode: SOURCE (normal Bluetooth output)"; r.classList.add('hidden'); t.textContent="Toggle Sink"; h.textContent="Tap Toggle to switch to SINK (receive audio)."; }
+  else { m.textContent="Mode: unknown (tap Refresh)"; r.classList.add('hidden'); t.textContent="Toggle Source / Sink"; if(!/exec API|Run manually/i.test(text||"")) h.textContent="If status can’t load, use APatch Action button or commands below."; }
 }
 function cbWrap(fn){
   const id="__a2dp_cb_"+Date.now()+"_"+Math.floor(Math.random()*1e6);

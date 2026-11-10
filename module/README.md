@@ -12,7 +12,7 @@ The ROM stack is unreliable with both A2DP roles active, so the module enforces 
 
 ## Install / control
 1. Flash the module zip in APatch/Magisk. Reboot if needed.
-2. **WebUI** (if supported): **Toggle Source/Sink** and **Restart A2DP Sink** (shown only in SINK mode). APatch **Action** button also toggles.
+2. **WebUI** (if supported): **Toggle Source / Toggle Sink** (dynamic by mode) and **Restart A2DP Sink** (shown only in SINK mode). APatch **Action** button also toggles.
 
 **Switching modes / after connecting:** changing **SOURCE ↔ SINK** restarts Bluetooth and can take **~10–20 seconds** (reconnection/service restart). After connecting in SINK mode, wait a few seconds for audio to start.
 

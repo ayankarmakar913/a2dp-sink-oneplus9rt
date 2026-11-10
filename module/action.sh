@@ -164,8 +164,7 @@ case "$ACTION" in
         echo "  on/off  : SINK (receive audio) / SOURCE (normal output)"
         echo "  status  : show current mode"
         echo "  restart : restart Bluetooth in SINK mode"
-        echo "  restart : restart Bluetooth in SINK mode"
         echo "  diag    : capture state/logs while reproducing an issue"
-                exit 1
+        exit 1
         ;;
 esac

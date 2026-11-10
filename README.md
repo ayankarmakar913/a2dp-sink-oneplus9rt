@@ -23,8 +23,8 @@ You are choosing to flash random root code from the internet onto your phone.
 ## Install & control
 1. Download the zip from [**Releases**](../../releases/latest) and flash in **APatch/Magisk**. Reboot if needed.
 2. **WebUI** (if supported): APatch → module → **WebUI**.
-   - **Toggle Source / Sink**
-   - **Restart A2DP Sink** appears **only in SINK mode** — use when reconnecting/switching the source device
+   - **Toggle Source / Toggle Sink** (dynamic by current mode)
+   - **Restart A2DP Sink** (shown **only in SINK mode**) — use when reconnecting/switching the source device
    - *If your APatch build doesn’t support module WebUI exec, the buttons may not run; use the Action button or commands below.*
 3. **APatch Action button:** toggles Source/Sink.
 

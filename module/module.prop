@@ -1,6 +1,7 @@
 id=a2dp_sink_enabler
 name=A2DP Sink/Source Switcher (OnePlus 9RT)
-version=1.4.1
-versionCode=10
+version=1.4.2
+versionCode=11
 author=ayankarmakar913
-description=[OxygenOS 16 / MT2111 ONLY] Switch A2DP SOURCE (normal output) <-> SINK (receiver). WebUI: Toggle + SINK-only Restart A2DP Sink. APatch/Magisk. Use at your own risk.
+description=[OxygenOS 16 / MT2111 ONLY] Switch A2DP SOURCE (normal output) <-> SINK (receiver) on OnePlus 9RT. WebUI with dynamic mode toggle and SINK-only restart. In-module updates supported. APatch/Magisk. Use at your own risk.
+updateJson=https://raw.githubusercontent.com/ayankarmakar913/a2dp-sink-oneplus9rt/main/update.json

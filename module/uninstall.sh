@@ -5,7 +5,7 @@ MODDIR=${0%/*}
 [ -f "$MODDIR/common.sh" ] || MODDIR=$(cd "$(dirname "$0")" 2>/dev/null && pwd)
 . "$MODDIR/common.sh" 2>/dev/null || true
 
-# Remove SBC-forcing interop entries (uses base+learned addresses if available)
+# Clean up interop and helpers (best effort)
 remove_sink_interop 2>/dev/null || true
 disable_audio_focus_overlay 2>/dev/null || true
 set_source_props 2>/dev/null || true
